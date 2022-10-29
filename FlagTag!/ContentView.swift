@@ -7,12 +7,25 @@
 
 import SwiftUI
 
+struct LargeBlueFont: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .font(.largeTitle)
+            .foregroundColor(.blue)
+    }
+}
+
 struct ContentView: View {
     
     @State private var alertShowingScore = false
     @State private var scoreTitle = ""
     
-    @State private var playerScore = 0
+    @State private var alertGameEnd = false
+    private let gameEndTitle = "Game Over!"
+    
+    @State private var correctScore = 0
+    @State private var wrongScore = 0
+    @State private var currentGuess = 0
     
     @State private var countries = ["Estonia",
                      "France",
@@ -28,6 +41,17 @@ struct ContentView: View {
     
     @State private var correctAnswer = Int.random(in: 0...2)
     
+    struct FlagImage: View {
+        var country: String
+        
+        var body: some View {
+            Image(country)
+                .renderingMode(.original)
+                .clipShape(Capsule())
+                .shadow(radius: 10)
+        }
+    }
+    
     var body: some View {
         ZStack {
             RadialGradient(stops: [
@@ -39,8 +63,7 @@ struct ContentView: View {
             VStack {
                 Spacer()
                 Text("Guess the Flag")
-                    .font(.largeTitle.bold())
-                    .foregroundColor(.white)
+                    .largeBlueFont()
                 
                 VStack(spacing: 15) {
                     VStack {
@@ -55,10 +78,7 @@ struct ContentView: View {
                         Button {
                             flagTapped(number)
                         } label: {
-                            Image(countries[number])
-                                .renderingMode(.original)
-                                .clipShape(Capsule())
-                                .shadow(radius: 10)
+                            FlagImage(country: countries[number])
                         }
                     }
                 }
@@ -70,35 +90,76 @@ struct ContentView: View {
                 Spacer()
                 Spacer()
                 
-                Text("Score: \(playerScore)")
+                Text("Score: \(correctScore)")
                     .foregroundColor(.white)
                     .font(.title.bold())
                 
                 Spacer()
             }
             .padding()
+            .alert(scoreTitle, isPresented: $alertShowingScore) {
+                Button("Continue", action: askQuestion)
+            } message: {
+                Text(
+                """
+                That was \(countries[currentGuess])!
+                
+                Number Correct: \(correctScore)
+                Number Wrong: \(wrongScore)
+                """)
+            }
         }
-        .alert(scoreTitle, isPresented: $alertShowingScore) {
-            Button("Continue", action: askQuestion)
+        .alert(gameEndTitle, isPresented: $alertGameEnd) {
+            Button("Ok", action: resetGame)
         } message: {
-            Text("Your Score is \(playerScore)")
+            Text(
+            """
+            Your final score is
+            \(correctScore) Correct
+            \(wrongScore) Wrong
+            
+            Want to play again?
+            """)
         }
     }
     
     func flagTapped(_ number: Int) {
-        if number == correctAnswer {
-            scoreTitle = "Correct"
-            playerScore += 1
+        currentGuess = number
+        if currentGuess == correctAnswer {
+            scoreTitle = "Correct!"
+            correctScore += 1
         } else {
-            scoreTitle = "Wrong"
+            scoreTitle = "Wrong!"
+            wrongScore += 1
         }
         
+        checkGameEnd()
         alertShowingScore = true
     }
     
     func askQuestion() {
         countries.shuffle()
         correctAnswer = Int.random(in: 0...2)
+    }
+    
+    func checkGameEnd() {
+        if correctScore + wrongScore >= 3 {
+            alertGameEnd = true
+        }
+        else if correctScore + wrongScore > 0{
+            alertShowingScore = true
+        }
+    }
+    
+    func resetGame() {
+        correctScore = 0
+        wrongScore = 0
+        alertShowingScore = false
+        scoreTitle = ""
+        alertGameEnd = false
+        correctScore = 0
+        wrongScore = 0
+        askQuestion()
     }
 }
 
@@ -107,3 +168,11 @@ struct ContentView_Previews: PreviewProvider {
         ContentView()
     }
 }
+
+
+extension View {
+    func largeBlueFont() -> some View {
+        modifier(LargeBlueFont())
+    }
+}
+
